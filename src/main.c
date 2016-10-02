@@ -1,5 +1,4 @@
-static void qemu_gdb_hang(void)
-{
+static void qemu_gdb_hang(void) {
 #ifdef DEBUG
 	static volatile int wait = 1;
 
@@ -9,10 +8,12 @@ static void qemu_gdb_hang(void)
 
 #include <desc.h>
 #include <ints.h>
+#include <serial.h>
 
-void main(void)
-{
+void main(void) {
 	qemu_gdb_hang();
+
+    init_serial_port();
 
 	struct desc_table_ptr ptr = {0, 0};
 
