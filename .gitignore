@@ -31,3 +31,9 @@
 # Debug files
 *.dSYM/
 *.su
+
+# Binary files
+kernel
+
+# Something (FIXME what?)
+*.d

@@ -8,16 +8,21 @@ static void qemu_gdb_hang(void) {
 
 #include <desc.h>
 #include <ints.h>
+#include <idt.h>
+#include <pic.h>
 #include <serial.h>
+#include <timer.h>
 
 void main(void) {
-	qemu_gdb_hang();
+    qemu_gdb_hang();
 
     init_serial_port();
+    init_idt();
+    init_pic();
 
-	struct desc_table_ptr ptr = {0, 0};
+    __asm__("int $0");
 
-	write_idtr(&ptr);
+    init_timer(2, 0xffffu);
 
-	while (1);
+    for(;;);
 }
