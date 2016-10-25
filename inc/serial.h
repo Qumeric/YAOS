@@ -1,15 +1,10 @@
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
-#include <stdint.h>
+#include <stddef.h>
 
-#define SP_ADRESS 0x3f8
-#define SP_FRAME_SIZE 8
-#define SP_STOP_BITS 1
-#define SP_DIVISOR 1
+void serial_setup(void);
+void serial_putchar(int c);
+void serial_write(const char *buf, size_t size);
 
-void init_serial_port();
-void sp_write_byte(uint8_t);
-void sp_write_string(const char*);
-
-#endif /*__SERIAL_H*/
+#endif /*__SERIAL_H__*/

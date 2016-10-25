@@ -1,4 +1,9 @@
-static void qemu_gdb_hang(void) {
+#include <serial.h>
+#include <ints.h>
+#include <time.h>
+
+static void qemu_gdb_hang(void)
+{
 #ifdef DEBUG
 	static volatile int wait = 1;
 
@@ -6,23 +11,14 @@ static void qemu_gdb_hang(void) {
 #endif
 }
 
-#include <desc.h>
-#include <ints.h>
-#include <idt.h>
-#include <pic.h>
-#include <serial.h>
-#include <timer.h>
+void main(void)
+{
+	qemu_gdb_hang();
 
-void main(void) {
-    qemu_gdb_hang();
+	serial_setup();
+	ints_setup();
+	time_setup();
+	enable_ints();
 
-    init_serial_port();
-    init_idt();
-    init_pic();
-
-    __asm__("int $0");
-
-    init_timer(2, 0xffffu);
-
-    for(;;);
+	while (1);
 }
