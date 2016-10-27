@@ -1,6 +1,7 @@
 #include <serial.h>
 #include <ints.h>
 #include <time.h>
+#include <memmap.h>
 
 static void qemu_gdb_hang(void)
 {
@@ -19,6 +20,7 @@ void main(void)
 	ints_setup();
 	time_setup();
 	enable_ints();
+    init_memmap();
 
 	while (1);
 }

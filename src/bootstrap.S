@@ -28,6 +28,11 @@ multiboot_header:
 
 
 	.align 16
+
+	.global multiboot_info
+multiboot_info:
+	.long 0
+
 gdt:
 	.quad 0x0000000000000000
 	.quad 0x00209b0000000000 // 64 bit ring0 code segment
@@ -56,6 +61,7 @@ stack_top:
 1:
 	movl $stack_top, %esp
 	pushl %eax
+	movl %ebx, multiboot_info
 	call videomem_clrscr
 	popl %eax
 	cmpl $0x2badb002, %eax
