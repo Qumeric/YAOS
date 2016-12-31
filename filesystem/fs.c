@@ -8,7 +8,7 @@ descriptor_t *descriptors[MAX_FILES];
 node_t *trie;
 
 descriptor_t *new_descriptor() {
-    descriptor_t *d = calloc(1, sizeof(descriptor_t));
+    descriptor_t *d = calloc(1, sizeof *d);
     d->lock = malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(d->lock, NULL);
     return d;
@@ -93,7 +93,7 @@ int32_t get_empty_block() {
             if (memory[i]->last == 0) {
                 return i;
             }
-            pthread_mutex_unlock(descriptors[i]->lock);
+            pthread_mutex_unlock(memory[i]->lock);
         }
     }
     return -1;
@@ -102,11 +102,9 @@ int32_t get_empty_block() {
 // Caution: locks!
 int32_t get_empty_descriptor() {
     for (int32_t i = 0; i < MAX_FILES; i++) {
-        if (pthread_mutex_trylock(descriptors[i]->lock) == 0) {
-            if (!descriptors[i]->used) {
-                return i;
-            }
-            pthread_mutex_unlock(descriptors[i]->lock);
+        if (descriptors[i] == NULL) {
+            descriptors[i] = new_descriptor();
+            return i;
         }
     }
     return -1;
@@ -139,28 +137,33 @@ int16_t mkdir(const char *pathname) {
 
 // Caution: don't forget to free
 char* get_path(node_t* node) {
-    char *buf = malloc(node->depth);
-    for (size_t ptr = (size_t) (node->depth - 1); ptr >= 0; ptr--) {
+    char *buf = malloc(node->depth+1);
+    buf[node->depth] = '\0';
+    for (int ptr = node->depth - 1; ptr >= 0; ptr--) {
+        printf("Node depth %d while ptr is %d  \n", node->depth, ptr);
         buf[ptr] = node->letter;
         node = node->parent;
     }
     return buf;
 }
 
-char* readdir(char *pathname) {
+char* readdir(const char *pathname) {
     static size_t ptr = 0;
     static char *path = NULL;
     static node_t** entries;
+    static size_t entry_count = 0;
     bool is_new = false;
     if (path == NULL || strcmp(path, pathname) != 0) {
+        if (path != NULL)
+            free(path);
         size_t len = strlen(pathname);
-        path = malloc(len);
-        memcpy(path, pathname, len);
+        path = malloc(len+1);
+        strcpy(path, pathname);
         is_new = true;
     }
 
     if (!is_new) {
-        if (ptr < sizeof(entries)) {
+        if (ptr < entry_count) {
             return get_path(entries[ptr++]);
         } else {
             return NULL;
@@ -173,7 +176,8 @@ char* readdir(char *pathname) {
     }
     ptr = 0;
     entries = node->dir_entries;
-    readdir(pathname);
+    entry_count = node->number_of_entries;
+    return readdir(pathname);
 }
 
 int16_t close(int32_t fd) {
@@ -238,8 +242,5 @@ void init_filesystem() {
     trie = new_node(DIR_T, '/');
     for (size_t i = 0; i < MEM_SIZE; i++) {
         memory[i] = new_block();
-    }
-    for (size_t i = 0; i < MAX_FILES; i++) {
-        descriptors[i] = new_descriptor();
     }
 }

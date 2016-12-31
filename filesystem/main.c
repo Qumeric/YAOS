@@ -56,8 +56,10 @@ int main() {
     open("test/a", READWRITE);
     open("test/b", READWRITE);
     open("test/c", READWRITE);
-    char* filename;
-    while ((filename = readdir("test/")) != NULL) {
-        printf("content: %s/n", filename);
-    }
+    char *filename;
+    do {
+        printf("content: %s\n", filename);
+        filename = readdir("test/");
+        free(filename);
+    } while (filename != NULL);
 }

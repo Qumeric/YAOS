@@ -58,7 +58,7 @@ int16_t close(int32_t fd);
 size_t read(int32_t fd, char *buf, size_t count);
 size_t write(int32_t fd, const char *buf, size_t count);
 int16_t mkdir(const char *pathname);
-char *readdir(char*);
+char *readdir(const char*);
 
 int32_t get_empty_block();
 int32_t get_empty_descriptor();
