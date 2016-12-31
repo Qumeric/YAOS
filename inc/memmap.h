@@ -1,6 +1,6 @@
-#ifndef __MEMMAP_H_
-#define __MEMMAP_H_
+#ifndef __MEMMAP_H__
+#define __MEMMAP_H__
 
 void init_memmap();
 
-#endif // __MEMMAP_H_
+#endif // __MEMMAP_H__
