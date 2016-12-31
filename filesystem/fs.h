@@ -48,6 +48,7 @@ typedef struct node_s {
     entry_info_t* info;
     struct node_s** dir_entries;
     size_t number_of_entries;
+    size_t entries_capacity;
 } node_t;
 
 entry_info_t* add(const char*, node_t*);

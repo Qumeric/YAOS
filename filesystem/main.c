@@ -20,15 +20,15 @@ static char *rand_string(char *str, size_t size)
 int main() {
     init_filesystem();
 
-    const size_t DESC_NUM = 64;
-    const size_t MAX_NAME_LEN = 32;
-    const size_t MAX_DATA_LEN = 8096;
+    const size_t DESC_NUM = 16; // 32
+    const size_t MAX_NAME_LEN = 16; //32
+    const size_t MAX_DATA_LEN = 128; //8096
 
     int32_t fds[DESC_NUM];
     int32_t lens[DESC_NUM];
     for (int i = 0; i < DESC_NUM; i++) {
         size_t len = (size_t) (rand() % MAX_NAME_LEN + 1);
-        char *data = malloc(len);
+        char *data = malloc(len+1);
         rand_string(data, len);
         printf("Opening: %s\n", data);
         fds[i] = open(data, READWRITE);
@@ -37,7 +37,7 @@ int main() {
 
     for (int i = 0; i < DESC_NUM; i++) {
         size_t len = (size_t) (rand() % MAX_DATA_LEN + 1);
-        char *data = malloc(len);
+        char *data = malloc(len+1);
         rand_string(data, len);
         lens[i] = (int32_t) len;
         printf("%d writing: %s\n", i, data);
@@ -60,5 +60,4 @@ int main() {
     while ((filename = readdir("test/")) != NULL) {
         printf("content: %s/n", filename);
     }
-
 }

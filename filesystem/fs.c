@@ -23,8 +23,10 @@ node_t *new_node(entry_t type, char letter) {
     node->info->lock = malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(node->info->lock, NULL);
     node->info->type = type;
-    if (node->info->type == DIR_T) {
-        node->dir_entries = calloc(1, sizeof(node_t**));
+    if (type == DIR_T) {
+        node->entries_capacity = 1;
+        node->dir_entries = calloc(node->entries_capacity, sizeof(node_t**));
+        node->number_of_entries = 0;
     }
     node->letter = letter;
     return node;
@@ -38,8 +40,9 @@ block_t* new_block() {
 }
 
 void add_trie_entry(node_t* dir, node_t* entry) {
-    if (sizeof(dir->dir_entries) / sizeof(size_t*) == dir->number_of_entries) {
-        dir->dir_entries = realloc(dir->dir_entries, dir->number_of_entries*2*sizeof(node_t**));
+    if (dir->entries_capacity == dir->number_of_entries) {
+        dir->entries_capacity *= 2;
+        dir->dir_entries = realloc(dir->dir_entries, dir->entries_capacity * sizeof(node_t**));
     }
     dir->dir_entries[dir->number_of_entries] = entry;
     dir->number_of_entries++;
@@ -116,12 +119,13 @@ int32_t open(const char *pathname, uint16_t flags) {
         printf("No available file descriptors");
         return -1;
     }
+    size_t len = strlen(pathname);
+    descriptors[descriptor]->pathname = malloc(len+1);
+    memcpy(descriptors[descriptor]->pathname, pathname, len);
+    descriptors[descriptor]->pathname[len] = '\0';
     if (flags != READONLY) {
         pthread_mutex_lock(add(pathname, trie)->lock);
     }
-    size_t len = strlen(pathname);
-    descriptors[descriptor]->pathname = malloc(len);
-    memcpy(descriptors[descriptor]->pathname, pathname, len);
     descriptors[descriptor]->flags = flags;
     descriptors[descriptor]->used = true;
     return descriptor;
