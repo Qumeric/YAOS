@@ -1,7 +1,4 @@
-#include <stdint.h>
-#include <string.h>
 #include "fs.h"
-
 
 block_t *memory[MEM_SIZE];
 descriptor_t *descriptors[MAX_FILES];
@@ -15,7 +12,6 @@ descriptor_t *new_descriptor() {
 }
 
 node_t *new_node(entry_t type, char letter) {
-    //printf("Creating node\n");
     node_t *node = calloc(1, sizeof(node_t));
     node->lock = malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(node->lock, NULL);
@@ -25,24 +21,24 @@ node_t *new_node(entry_t type, char letter) {
     node->info->type = type;
     if (type == DIR_T) {
         node->entries_capacity = 1;
-        node->dir_entries = calloc(node->entries_capacity, sizeof(node_t**));
+        node->dir_entries = calloc(node->entries_capacity, sizeof(node_t **));
         node->number_of_entries = 0;
     }
     node->letter = letter;
     return node;
 }
 
-block_t* new_block() {
+block_t *new_block() {
     block_t *b = calloc(1, sizeof(block_t));
     b->lock = malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(b->lock, NULL);
     return b;
 }
 
-void add_trie_entry(node_t* dir, node_t* entry) {
+void add_trie_entry(node_t *dir, node_t *entry) {
     if (dir->entries_capacity == dir->number_of_entries) {
         dir->entries_capacity *= 2;
-        dir->dir_entries = realloc(dir->dir_entries, dir->entries_capacity * sizeof(node_t**));
+        dir->dir_entries = realloc(dir->dir_entries, dir->entries_capacity * sizeof(node_t **));
     }
     dir->dir_entries[dir->number_of_entries] = entry;
     dir->number_of_entries++;
@@ -52,7 +48,7 @@ void add_trie_entry(node_t* dir, node_t* entry) {
 // pathname cannot be empty. if pathname ends with "/" then directory will be created
 entry_info_t *add(const char *pathname, node_t *trie) {
     size_t ptr = 0;
-    node_t* last_slash = trie;
+    node_t *last_slash = trie;
     bool is_new = false;
     while (pathname[ptr] != '\0') {
         //printf("add step to %c\n", pathname[ptr]);
@@ -118,9 +114,8 @@ int32_t open(const char *pathname, uint16_t flags) {
         return -1;
     }
     size_t len = strlen(pathname);
-    descriptors[descriptor]->pathname = malloc(len+1);
-    memcpy(descriptors[descriptor]->pathname, pathname, len);
-    descriptors[descriptor]->pathname[len] = '\0';
+    descriptors[descriptor]->pathname = malloc(len + 1);
+    strcpy(descriptors[descriptor]->pathname, pathname);
     if (flags != READONLY) {
         pthread_mutex_lock(add(pathname, trie)->lock);
     }
@@ -136,8 +131,8 @@ int16_t mkdir(const char *pathname) {
 }
 
 // Caution: don't forget to free
-char* get_path(node_t* node) {
-    char *buf = malloc(node->depth+1);
+char *get_path(node_t *node) {
+    char *buf = malloc(node->depth + 1);
     buf[node->depth] = '\0';
     for (int ptr = node->depth - 1; ptr >= 0; ptr--) {
         printf("Node depth %d while ptr is %d  \n", node->depth, ptr);
@@ -147,17 +142,17 @@ char* get_path(node_t* node) {
     return buf;
 }
 
-char* readdir(const char *pathname) {
+char *readdir(const char *pathname) {
     static size_t ptr = 0;
     static char *path = NULL;
-    static node_t** entries;
+    static node_t **entries;
     static size_t entry_count = 0;
     bool is_new = false;
     if (path == NULL || strcmp(path, pathname) != 0) {
         if (path != NULL)
             free(path);
         size_t len = strlen(pathname);
-        path = malloc(len+1);
+        path = malloc(len + 1);
         strcpy(path, pathname);
         is_new = true;
     }
@@ -186,7 +181,10 @@ int16_t close(int32_t fd) {
         pthread_mutex_unlock(add(descriptors[fd]->pathname, trie)->lock);
     }
     pthread_mutex_unlock(descriptors[fd]->lock);
+    free(descriptors[fd]->lock);
+    free(descriptors[fd]->pathname);
     free(descriptors[fd]);
+
     return 0; // Indicates success
 }
 
@@ -197,12 +195,13 @@ size_t write(int32_t fd, const char *buf, size_t count) {
     entry_info_t *info = add(descriptors[fd]->pathname, trie);
 
     size_t ptr = 0;
-    while (ptr < count) { int32_t block = get_empty_block();
+    while (ptr < count) {
+        int32_t block = get_empty_block();
         if (block == -1) { // No empty space
             return ptr;
         }
         size_t block_ptr = 0;
-        while(ptr < count && block_ptr < BLOCK_SIZE) {
+        while (ptr < count && block_ptr < BLOCK_SIZE) {
             memory[block]->memory[block_ptr] = buf[ptr];
             ptr++;
             block_ptr++;
@@ -239,7 +238,7 @@ size_t read(int32_t fd, char *buf, size_t count) {
 }
 
 void init_filesystem() {
-    trie = new_node(DIR_T, '/');
+    trie = new_node(DIR_T, '/'); // create root directory
     for (size_t i = 0; i < MEM_SIZE; i++) {
         memory[i] = new_block();
     }

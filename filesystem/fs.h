@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <malloc.h>
 #include <pthread.h>
+#include <string.h>
 #include <stdbool.h>
 
 // a better alternative to #define

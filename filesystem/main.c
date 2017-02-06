@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include "fs.h"
 
@@ -42,6 +41,7 @@ int main() {
         lens[i] = (int32_t) len;
         printf("%d writing: %s\n", i, data);
         write((uint32_t) fds[i], data, len);
+        free(data);
     }
 
     for (int i = 0; i < DESC_NUM; i++) {
@@ -50,16 +50,16 @@ int main() {
         buf[len] = '\0';
         printf("%d reading: %s\n", i, buf);
         close(fds[i]);
+        free(buf);
     }
 
     mkdir("test/");
     open("test/a", READWRITE);
     open("test/b", READWRITE);
     open("test/c", READWRITE);
-    char *filename;
-    do {
+    char *filename ;
+    for (char *filename = readdir("test/"); filename != NULL; filename = readdir("test/")) {
         printf("content: %s\n", filename);
-        filename = readdir("test/");
         free(filename);
-    } while (filename != NULL);
+    }
 }

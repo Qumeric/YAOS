@@ -390,6 +390,13 @@ void *mem_alloc(size_t size)
 	return va(page_addr(page));
 }
 
+void *mem_calloc(size_t size) {
+    char *mem = (char*) mem_alloc(size);
+    for (int i = 0; i < size; i++)
+        mem[i] = 0;
+    return mem;
+}
+
 void mem_free(void *ptr)
 {
 	if (!ptr)
