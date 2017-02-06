@@ -1,27 +1,27 @@
-#include "fs.h"
+#include <fs.h>
 
 block_t *memory[MEM_SIZE];
 descriptor_t *descriptors[MAX_FILES];
 node_t *trie;
 
 descriptor_t *new_descriptor() {
-    descriptor_t *d = calloc(1, sizeof *d);
-    d->lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(d->lock, NULL);
+    descriptor_t *d = mem_calloc(sizeof *d);
+    d->lock = mem_alloc(sizeof(mutex_t));
+    mutex_setup(d->lock);
     return d;
 }
 
 node_t *new_node(entry_t type, char letter) {
-    node_t *node = calloc(1, sizeof(node_t));
-    node->lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(node->lock, NULL);
-    node->info = calloc(1, sizeof(entry_info_t));
-    node->info->lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(node->info->lock, NULL);
+    node_t *node = mem_calloc(sizeof(node_t));
+    node->lock = mem_alloc(sizeof(mutex_t));
+    mutex_setup(node->lock);
+    node->info = mem_calloc(sizeof(entry_info_t));
+    node->info->lock = mem_alloc(sizeof(mutex_t));
+    mutex_setup(node->info->lock);
     node->info->type = type;
     if (type == DIR_T) {
         node->entries_capacity = 1;
-        node->dir_entries = calloc(node->entries_capacity, sizeof(node_t **));
+        node->dir_entries = mem_calloc(node->entries_capacity * sizeof(node_t **));
         node->number_of_entries = 0;
     }
     node->letter = letter;
@@ -29,16 +29,16 @@ node_t *new_node(entry_t type, char letter) {
 }
 
 block_t *new_block() {
-    block_t *b = calloc(1, sizeof(block_t));
-    b->lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(b->lock, NULL);
+    block_t *b = mem_calloc(sizeof(block_t));
+    b->lock = mem_alloc(sizeof(mutex_t));
+    mutex_setup(b->lock);
     return b;
 }
 
 void add_trie_entry(node_t *dir, node_t *entry) {
     if (dir->entries_capacity == dir->number_of_entries) {
         dir->entries_capacity *= 2;
-        dir->dir_entries = realloc(dir->dir_entries, dir->entries_capacity * sizeof(node_t **));
+        dir->dir_entries = mem_realloc(dir->dir_entries, dir->entries_capacity * sizeof(node_t **));
     }
     dir->dir_entries[dir->number_of_entries] = entry;
     dir->number_of_entries++;
@@ -52,8 +52,8 @@ entry_info_t *add(const char *pathname, node_t *trie) {
     bool is_new = false;
     while (pathname[ptr] != '\0') {
         //printf("add step to %c\n", pathname[ptr]);
-        pthread_mutex_t *oldLock = trie->lock;
-        pthread_mutex_lock(oldLock);
+        mutex_t *oldLock = trie->lock;
+        mutex_lock(oldLock);
         char l = pathname[ptr];
         if (trie->nodes[l] == NULL) {
             if (l == '/') {
@@ -70,7 +70,7 @@ entry_info_t *add(const char *pathname, node_t *trie) {
         trie = trie->nodes[l];
         if (l == '/')
             last_slash = trie;
-        pthread_mutex_unlock(oldLock);
+        mutex_unlock(oldLock);
         ptr++;
     }
     if (trie->info->type == NOTHING_T) {
@@ -85,11 +85,11 @@ entry_info_t *add(const char *pathname, node_t *trie) {
 // Caution: locks!
 int32_t get_empty_block() {
     for (int32_t i = 0; i < MEM_SIZE; i++) {
-        if (pthread_mutex_trylock(memory[i]->lock) == 0) {
+        if (!memory[i]->lock->locked) { // FIXME
             if (memory[i]->last == 0) {
                 return i;
             }
-            pthread_mutex_unlock(memory[i]->lock);
+            mutex_unlock(memory[i]->lock);
         }
     }
     return -1;
@@ -114,10 +114,10 @@ int32_t open(const char *pathname, uint16_t flags) {
         return -1;
     }
     size_t len = strlen(pathname);
-    descriptors[descriptor]->pathname = malloc(len + 1);
+    descriptors[descriptor]->pathname = mem_alloc(len + 1);
     strcpy(descriptors[descriptor]->pathname, pathname);
     if (flags != READONLY) {
-        pthread_mutex_lock(add(pathname, trie)->lock);
+        mutex_lock(add(pathname, trie)->lock);
     }
     descriptors[descriptor]->flags = flags;
     descriptors[descriptor]->used = true;
@@ -130,9 +130,9 @@ int16_t mkdir(const char *pathname) {
     return 0; // indicates success
 }
 
-// Caution: don't forget to free
+// Caution: don't forget to mem_free
 char *get_path(node_t *node) {
-    char *buf = malloc(node->depth + 1);
+    char *buf = mem_alloc(node->depth + 1);
     buf[node->depth] = '\0';
     for (int ptr = node->depth - 1; ptr >= 0; ptr--) {
         printf("Node depth %d while ptr is %d  \n", node->depth, ptr);
@@ -149,10 +149,12 @@ char *readdir(const char *pathname) {
     static size_t entry_count = 0;
     bool is_new = false;
     if (path == NULL || strcmp(path, pathname) != 0) {
-        if (path != NULL)
-            free(path);
+        if (path != NULL) {
+            mem_free(path);
+        } else {
+        }
         size_t len = strlen(pathname);
-        path = malloc(len + 1);
+        path = mem_alloc(len + 1);
         strcpy(path, pathname);
         is_new = true;
     }
@@ -178,12 +180,12 @@ char *readdir(const char *pathname) {
 int16_t close(int32_t fd) {
     descriptors[fd]->used = false;
     if (descriptors[fd]->flags != READONLY) {
-        pthread_mutex_unlock(add(descriptors[fd]->pathname, trie)->lock);
+        mutex_unlock(add(descriptors[fd]->pathname, trie)->lock);
     }
-    pthread_mutex_unlock(descriptors[fd]->lock);
-    free(descriptors[fd]->lock);
-    free(descriptors[fd]->pathname);
-    free(descriptors[fd]);
+    mutex_unlock(descriptors[fd]->lock);
+    mem_free(descriptors[fd]->lock);
+    mem_free(descriptors[fd]->pathname);
+    mem_free(descriptors[fd]);
 
     return 0; // Indicates success
 }
@@ -207,7 +209,7 @@ size_t write(int32_t fd, const char *buf, size_t count) {
             block_ptr++;
         }
         memory[block]->last = block_ptr;
-        pthread_mutex_unlock(memory[block]->lock);
+        mutex_unlock(memory[block]->lock);
         info->blocks[info->last] = (size_t) block;
         info->last++;
     }

@@ -392,9 +392,9 @@ void *mem_alloc(size_t size)
 
 void *mem_calloc(size_t size) {
     char *mem = (char*) mem_alloc(size);
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
         mem[i] = 0;
-    return mem;
+    return (void*) mem;
 }
 
 void mem_free(void *ptr)

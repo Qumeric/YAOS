@@ -1,15 +1,17 @@
 #ifndef __FS_H__
 #define __FS_H__
 
-#include <stdint.h>
-#include <malloc.h>
-#include <pthread.h>
+#include <alloc.h>
 #include <string.h>
+#include <mutex.h>
+#include <stdint.h>
 #include <stdbool.h>
+
+typedef struct mutex mutex_t;
 
 // a better alternative to #define
 enum {
-    MEM_SIZE    = 1 << 16,
+    MEM_SIZE    = 1 << 12,
     MAX_FILES   = 1 << 8,
     BLOCK_SIZE  = 1 << 12,
     MAX_NAME    = 64,
@@ -19,14 +21,14 @@ enum {
 typedef enum { READONLY = 1, WRITEONLY = 2, READWRITE = 4} flags_t;
 
 typedef struct descriptor_s {
-    pthread_mutex_t *lock;
+    mutex_t *lock;
     bool used;
     uint16_t flags;
     char* pathname;
 } descriptor_t;
 
 typedef struct block_s {
-    pthread_mutex_t *lock;
+    mutex_t *lock;
     char memory[BLOCK_SIZE];
     size_t last;
 } block_t;
@@ -34,14 +36,14 @@ typedef struct block_s {
 typedef enum { NOTHING_T, FILE_T, DIR_T } entry_t;
 
 typedef struct entry_info_s {
-    pthread_mutex_t *lock;
+    mutex_t *lock;
     entry_t type;
     size_t blocks[256]; // FIXME much memory
     size_t last;
 } entry_info_t;
 
 typedef struct node_s {
-    pthread_mutex_t *lock;
+    mutex_t *lock;
     char letter;
     uint16_t depth;
     struct node_s* parent;
